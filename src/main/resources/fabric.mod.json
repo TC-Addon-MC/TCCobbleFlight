@@ -1,7 +1,7 @@
 {
 	"schemaVersion": 1,
 	"id": "flyingspawn",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"name": "TC-CobbleFlight",
 	"description": "Wild Pokémon actually fly! Each one takes off, soars, and lands naturally. Fully configurable",
 	"authors": ["Toan Cao"],

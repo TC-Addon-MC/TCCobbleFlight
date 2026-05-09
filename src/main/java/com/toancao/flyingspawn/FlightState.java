@@ -5,11 +5,19 @@ package com.toancao.flyingspawn;
  *
  * Sơ đồ chuyển trạng thái:
  *
- *   GROUNDED ──(takeoff)──▶ TAKING_OFF ──(done)──▶ FLYING
- *      ▲                                               │
- *      └──────────(smooth land)── LANDING ◀──(land)───┘
+ *   PERCHING ──(observe done)──▶ GROUNDED ──(takeoff)──▶ TAKING_OFF ──(done)──▶ FLYING
+ *      ▲                            ▲                                               │
+ *      └────────────────────────────└──────(smooth land)── LANDING ◀──(land)───────┘
+ *
+ *   Spawn luôn bắt đầu ở PERCHING — đứng yên quan sát vài giây trước khi hành động.
  */
 public enum FlightState {
+
+    /**
+     * Vừa spawn — đứng yên quan sát, chưa có hành vi tự chủ nào.
+     * Chuyển sang GROUNDED sau khi hết observe delay.
+     */
+    PERCHING,
 
     /**
      * Đứng / đi bộ / nhìn xung quanh trên mặt đất.

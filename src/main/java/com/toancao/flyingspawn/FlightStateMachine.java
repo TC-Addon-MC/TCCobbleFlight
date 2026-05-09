@@ -11,6 +11,12 @@ import java.util.Random;
 
 /**
  * Điều khiển trạng thái bay của từng Pokemon riêng biệt.
+ *
+ * Spawn flow: PERCHING (quan sát) → GROUNDED → TAKING_OFF → FLYING ⇄ LANDING
+ *
+ * Agitation system: Pokemon calm không bay mạnh. Agitation tăng khi bị hit / combat / player lại gần.
+ * Legendary: neo anchor tại spawn, chỉ patrol trong radius.
+ * Proximity gate: chim chỉ bay khi player trong 20 block.
  */
 public class FlightStateMachine {
 
@@ -37,7 +43,13 @@ public class FlightStateMachine {
         globalTick++;
         profile.ticksInCurrentState++;
 
+        tickAgitation();
+
         switch (state) {
+            case PERCHING -> {
+                pokemon.setFlying(false);
+                tickPerching();
+            }
             case GROUNDED -> {
                 pokemon.setFlying(false);
                 tickGrounded();
@@ -47,6 +59,11 @@ public class FlightStateMachine {
                 tickTakingOff();
             }
             case FLYING -> {
+                // Chỉ duy trì bay khi player trong fly radius
+                if (!isPlayerWithinFlyRadius()) {
+                    transitionTo(FlightState.LANDING);
+                    return;
+                }
                 pokemon.setFlying(true);
                 tickFlying();
             }
@@ -57,14 +74,54 @@ public class FlightStateMachine {
         }
     }
 
+    /**
+     * Agitation system: tăng khi bị hit / combat / player gần; giảm dần theo thời gian.
+     */
+    private void tickAgitation() {
+        FlyingSpawnConfig cfg = FlyingSpawnConfig.get();
+
+        if (pokemon.hurtTime > 0) {
+            profile.agitation = Math.min(1.0, profile.agitation + cfg.agitationHitIncrease);
+        }
+        if (pokemon.getBattleId() != null) {
+            profile.agitation = Math.min(1.0, profile.agitation + cfg.agitationBattleIncrease);
+        }
+        if (isPlayerNearby(cfg)) {
+            profile.agitation = Math.min(1.0, profile.agitation + cfg.agitationProximityIncrease);
+        }
+        profile.agitation = Math.max(0.0, profile.agitation - cfg.agitationDecayPerTick);
+    }
+
+    /**
+     * PERCHING: đứng yên quan sát sau spawn.
+     * Nếu bị giật mình (agitation cao), rút ngắn thời gian observe.
+     */
+    private void tickPerching() {
+        profile.spawnObserveTicks++;
+        FlyingSpawnConfig cfg = FlyingSpawnConfig.get();
+
+        boolean startled = profile.agitation >= cfg.agitationStartleThreshold;
+        int requiredTicks = startled ? cfg.spawnObserveTicksMin : cfg.spawnObserveTicksNormal;
+
+        if (profile.spawnObserveTicks >= requiredTicks) {
+            transitionTo(FlightState.GROUNDED);
+        }
+    }
+
     private void tickGrounded() {
         GroundedBehavior.tick(pokemon, profile, globalTick);
         FlyingSpawnConfig cfg = FlyingSpawnConfig.get();
 
         if (globalTick % cfg.transitionCheckInterval == 0) {
+            // Chim chỉ cất cánh khi player trong fly radius (20 block)
+            if (!isPlayerWithinFlyRadius()) return;
+
             boolean nearPlayer = isPlayerNearby(cfg);
             boolean openSpace = isOpenSpace(cfg);
             double takeoffChance = profile.computedTakeoffChance(nearPlayer, openSpace);
+
+            // Calm pokemon (agitation thấp) không dễ cất cánh trừ khi đã idle lâu
+            if (profile.agitation < cfg.agitationMinToFly && profile.idleTicks < cfg.idleLongThreshold1) return;
 
             if (RNG.nextDouble() < takeoffChance) {
                 transitionTo(FlightState.TAKING_OFF);
@@ -78,8 +135,22 @@ public class FlightStateMachine {
     }
 
     private void tickFlying() {
+        profile.speedBonus = profile.isLegendary ? 0.0 : 0.25;
         FlyingBehavior.tick(pokemon, profile, globalTick);
         FlyingSpawnConfig cfg = FlyingSpawnConfig.get();
+
+        // Legendary: kéo về anchor nếu bay quá xa
+        if (profile.isLegendary) {
+            double dx = pokemon.getX() - profile.anchorX;
+            double dz = pokemon.getZ() - profile.anchorZ;
+            double distSq = dx * dx + dz * dz;
+            double maxRadius = cfg.legendaryPatrolRadius;
+            if (distSq > maxRadius * maxRadius) {
+                // Quay đầu về anchor
+                double angleToAnchor = Math.toDegrees(Math.atan2(-dx, dz));
+                profile.currentYaw = angleToAnchor;
+            }
+        }
 
         if (globalTick % cfg.transitionCheckInterval == 0) {
             boolean nearGround = isNearGround(cfg);
@@ -106,12 +177,31 @@ public class FlightStateMachine {
             profile.refreshPreferredHeight();
             profile.verticalVelocity = 0.0;
             profile.currentYaw = RNG.nextDouble() * 360.0;
+            if (profile.isLegendary) {
+                profile.verticalVelocity= profile.verticalVelocity + profile.verticalVelocity*0.25;
+            }
         }
     }
 
+    /** Kiểm tra có player trong playerAlertRadius (dùng cho agitation / nearPlayer check) */
     private boolean isPlayerNearby(FlyingSpawnConfig cfg) {
         if (pokemon.level() == null) return false;
         double r = cfg.playerAlertRadius;
+        List<Player> players = pokemon.level().getEntitiesOfClass(
+                Player.class,
+                new AABB(pokemon.getX() - r, pokemon.getY() - r, pokemon.getZ() - r,
+                        pokemon.getX() + r, pokemon.getY() + r, pokemon.getZ() + r)
+        );
+        return !players.isEmpty();
+    }
+
+    /**
+     * Proximity gate: chim chỉ bay khi có player trong flyActivationRadius (mặc định 20 block).
+     */
+    private boolean isPlayerWithinFlyRadius() {
+        if (pokemon.level() == null) return false;
+        FlyingSpawnConfig cfg = FlyingSpawnConfig.get();
+        double r = cfg.flyActivationRadius;
         List<Player> players = pokemon.level().getEntitiesOfClass(
                 Player.class,
                 new AABB(pokemon.getX() - r, pokemon.getY() - r, pokemon.getZ() - r,
@@ -165,10 +255,14 @@ public class FlightStateMachine {
         double finalY = highestSolidY + profile.preferredHeight;
 
         pokemon.setDeltaMovement(0, 0, 0);
-        // Dùng teleport chuẩn thay vì nhấc lên quá cao để không bị xóa khỏi thế giới
         pokemon.teleportTo(startX, finalY, startZ);
         pokemon.setOldPosAndRot();
-        pokemon.hurtMarked = true; // Ép client cập nhật vị trí ngay lập tức
+        pokemon.hurtMarked = true;
+    }
+
+    /** Cho phép caller khởi tạo thêm thông tin vào profile sau khi tạo machine */
+    public void initProfile(java.util.function.Consumer<PokemonFlightProfile> init) {
+        init.accept(profile);
     }
 
     public FlightState getState() { return state; }
