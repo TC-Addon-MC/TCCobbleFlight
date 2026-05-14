@@ -1,5 +1,6 @@
 package com.toancao.flyingspawn;
 
+import com.cobblemon.mod.common.entity.pokemon.PokemonBehaviourFlag;
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
@@ -47,15 +48,15 @@ public class FlightStateMachine {
 
         switch (state) {
             case PERCHING -> {
-                pokemon.setFlying(false);
+                pokemon.setBehaviourFlag(PokemonBehaviourFlag.FLYING, false);
                 tickPerching();
             }
             case GROUNDED -> {
-                pokemon.setFlying(false);
+                pokemon.setBehaviourFlag(PokemonBehaviourFlag.FLYING, false);
                 tickGrounded();
             }
             case TAKING_OFF -> {
-                pokemon.setFlying(true);
+                pokemon.setBehaviourFlag(PokemonBehaviourFlag.FLYING, true);
                 tickTakingOff();
             }
             case FLYING -> {
@@ -64,11 +65,11 @@ public class FlightStateMachine {
                     transitionTo(FlightState.LANDING);
                     return;
                 }
-                pokemon.setFlying(true);
+                pokemon.setBehaviourFlag(PokemonBehaviourFlag.FLYING, true);
                 tickFlying();
             }
             case LANDING -> {
-                pokemon.setFlying(true);
+                pokemon.setBehaviourFlag(PokemonBehaviourFlag.FLYING, true);
                 tickLanding();
             }
         }
@@ -273,7 +274,7 @@ public class FlightStateMachine {
 
     public void deactivate() {
         pokemon.setNoGravity(false);
-        pokemon.setFlying(false);
+        pokemon.setBehaviourFlag(PokemonBehaviourFlag.FLYING, false);
         pokemon.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
     }
 }
