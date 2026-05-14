@@ -34,7 +34,7 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	modImplementation "net.fabricmc:fabric-language-kotlin:1.12.2+kotlin.2.0.20"
-
+	modCompileOnly files("libs/fightorflight-fabric-0.10.7.jar")
 	modCompileOnly "com.cobblemon:fabric:${project.cobblemon_version}"  // chỉ compile, không run
 	modImplementation "me.shedaniel.cloth:cloth-config-fabric:15.0.140"
 	include "me.shedaniel.cloth:cloth-config-fabric:15.0.140"
