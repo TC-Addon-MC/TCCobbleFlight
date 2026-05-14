@@ -57,9 +57,8 @@ public class FlyingBehavior {
 
         double radians = Math.toRadians(profile.currentYaw);
         double speedMult = getTypeSpeedMultiplier(pokemon, cfg) * getWeightSpeedMultiplier(pokemon, cfg);
-        double hX = -Math.sin(radians) * profile.flightSpeed * speedMult;
-        double hZ =  Math.cos(radians) * profile.flightSpeed * speedMult;
-
+        double hX = -Math.sin(radians) * (profile.flightSpeed + profile.speedBonus) * speedMult;
+        double hZ =  Math.cos(radians) * (profile.flightSpeed + profile.speedBonus) * speedMult;
         Vec3 velocity = new Vec3(hX, sinSway + heightCorrection, hZ);
         pokemon.setDeltaMovement(velocity);
         syncRotationFromVelocity(pokemon, velocity);

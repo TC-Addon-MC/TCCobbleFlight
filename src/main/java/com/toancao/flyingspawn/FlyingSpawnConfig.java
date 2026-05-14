@@ -91,6 +91,36 @@ public class FlyingSpawnConfig implements ConfigData {
     public double hopVelocityY            = 0.25;
 
     public int    groundScanDepth         = 50;
+
+    // ── Spawn observe (PERCHING delay) ────────────────────────────
+    /** Số tick đứng yên sau spawn trong điều kiện bình thường (~3 giây = 60 tick) */
+    public int    spawnObserveTicksNormal  = 60;
+    /** Số tick tối thiểu nếu bị giật mình (agitation cao) (~1 giây = 20 tick) */
+    public int    spawnObserveTicksMin     = 20;
+
+    // ── Agitation system ──────────────────────────────────────────
+    /** Agitation tăng mỗi tick khi bị hit */
+    public double agitationHitIncrease        = 0.40;
+    /** Agitation tăng mỗi tick khi đang trong battle */
+    public double agitationBattleIncrease     = 0.05;
+    /** Agitation tăng mỗi tick khi player trong alertRadius */
+    public double agitationProximityIncrease  = 0.003;
+    /** Agitation giảm mỗi tick (calm down) */
+    public double agitationDecayPerTick       = 0.001;
+    /** Ngưỡng agitation để coi là "bị giật mình" → rút ngắn perch time */
+    public double agitationStartleThreshold   = 0.5;
+    /** Agitation tối thiểu để được phép cất cánh (trừ khi đã idle lâu) */
+    public double agitationMinToFly           = 0.05;
+    /** Bonus takeoff chance theo agitation (nhân với agitation 0-1) */
+    public double agitationTakeoffBonus       = 0.30;
+
+    // ── Proximity fly gate ────────────────────────────────────────
+    /** Bán kính tối đa để kích hoạt hành vi bay (chim chỉ bay khi player trong vòng này) */
+    public double flyActivationRadius         = 40.0;
+
+    // ── Legendary patrol ─────────────────────────────────────────
+    /** Bán kính patrol tối đa của legendary (tính từ anchor spawn) */
+    public double legendaryPatrolRadius       = 30.0;
     public int    initialFlightScanUp     = 30;
     public int    nearGroundBlockDist     = 4;
 
@@ -160,6 +190,9 @@ public class FlyingSpawnConfig implements ConfigData {
         flyingLongThreshold     = Math.max(1, flyingLongThreshold);
         groundScanDepth         = Math.max(5, groundScanDepth);
         initialFlightScanUp     = Math.max(1, initialFlightScanUp);
+        try {
+            AutoConfig.getConfigHolder(FlyingSpawnConfig.class).save();
+        } catch (Exception ignored) {}
     }
 
     public static void register() {

@@ -2,6 +2,7 @@ package com.toancao.flyingspawn;
 
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.cobblemon.mod.common.pokemon.Pokemon;
+import net.fabricmc.loader.api.FabricLoader;
 
 /**
  * Kiểm tra ngữ cảnh (context) của Pokemon trước khi áp dụng hành vi bay.
@@ -15,7 +16,7 @@ import com.cobblemon.mod.common.pokemon.Pokemon;
  * và behavior mặc định của Cobblemon được giữ nguyên.
  */
 public class FlightContext {
-
+    private static final boolean HAS_FIGHT_OR_FLIGHT = FabricLoader.getInstance().isModLoaded("fightorflight");
     /**
      * Trả về true nếu Pokemon này hiện tại ĐỦ ĐIỀU KIỆN để bay tự do.
      */
@@ -30,6 +31,20 @@ public class FlightContext {
         // 2. Không đang trong battle
         if (pokemon.getBattleId() != null) return false;
         if (pokemon.isSleeping()) return false;
+        if (pokemon.isBusy()) return false;
+        if (pokemon.isVehicle()) return false;
+        if (HAS_FIGHT_OR_FLIGHT) {
+            // Nếu nó đang Tức giận (Fight) hoặc Hoảng sợ (Flight) -> Tắt bay, nhường quyền
+            if (FightOrFlightCompat.isEngaged(pokemon)) {
+                return false;
+            }
+        } else {
+            // DỰ PHÒNG: Nếu server không cài Fight or Flight, dùng logic mặc định
+            if (pokemon.getTarget() != null) return false;
+            if (pokemon.getLastHurtByMob() != null && pokemon.tickCount - pokemon.getLastHurtByMobTimestamp() < 300) {
+                return false; // Nhường AI 15 giây sau khi bị đánh
+            }
+        }
         // 3. Entity phải tồn tại trong world hợp lệ
         if (pokemon.level() == null) return false;
 

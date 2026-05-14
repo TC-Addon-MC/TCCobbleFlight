@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.util.function.Consumer;
+
 /**
  * Tick loop trung tâm — chạy tất cả FlightStateMachine mỗi server tick.
  *
@@ -30,19 +32,19 @@ public class FlightTickManager {
         LOGGER.info("✅ FlightTickManager: Đã đăng ký END_SERVER_TICK");
     }
 
-    /**
-     * Đăng ký Pokemon mới vào hệ thống quản lý.
-     *
-     * @param pokemon      Entity Pokemon
-     * @param initialState Trạng thái ban đầu (GROUNDED hoặc FLYING)
-     */
     public static void register(PokemonEntity pokemon, FlightState initialState) {
-        UUID id = pokemon.getUUID();
+        register(pokemon, initialState, null);
+    }
 
-        // Tránh đăng ký trùng
+    /**
+     * Đăng ký Pokemon mới, với callback để khởi tạo thêm profile (ví dụ: set legendary anchor).
+     */
+    public static void register(PokemonEntity pokemon, FlightState initialState, java.util.function.Consumer<PokemonFlightProfile> profileInit) {
+        UUID id = pokemon.getUUID();
         if (machines.containsKey(id)) return;
 
         FlightStateMachine machine = new FlightStateMachine(pokemon, initialState);
+        if (profileInit != null) machine.initProfile(profileInit);
         machines.put(id, machine);
         entities.put(id, pokemon);
 
@@ -92,7 +94,7 @@ public class FlightTickManager {
                 machine.deactivate(); // Trả lại trạng thái mặc định
                 iterator.remove();
                 entities.remove(id);
-                 continue;
+                continue;
             }
 
             try {

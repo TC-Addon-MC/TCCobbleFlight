@@ -12,6 +12,6 @@ public class FlyingCapabilityChecker {
         if (cfg.forceFly.contains(speciesName)) return true;
         if (cfg.cannotFly.contains(speciesName)) return false;
 
-        return pokemon.canFly();
+        return pokemon.getBehaviour().getMoving().getFly().getCanFly();
     }
 }

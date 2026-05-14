@@ -9,6 +9,16 @@ public class PokemonFlightProfile {
 
     public int fallDamageImmunityTicks = 0;
 
+    // Agitation: 0.0 = calm, 1.0 = fully agitated. Tăng khi player lại gần / bị hit.
+    public double agitation = 0.0;
+
+    // Spawn observe: đứng yên quan sát sau khi spawn
+    public int spawnObserveTicks = 0;
+
+    // Legendary anchor — neo vị trí spawn, chỉ patrol trong radius
+    public boolean isLegendary = false;
+    public double anchorX = 0, anchorY = 0, anchorZ = 0;
+
     public final double flightSpeed;
     public double preferredHeight;
     public final double baseTakeoffChance;
@@ -24,7 +34,7 @@ public class PokemonFlightProfile {
     public double verticalVelocity;
 
     public final double heightMultiplier;
-
+    public double speedBonus = 0.25;
     public PokemonFlightProfile(PokemonEntity pokemon) {
         long seed = pokemon.getUUID().getLeastSignificantBits() ^ pokemon.getUUID().getMostSignificantBits();
         Random r = new Random(seed);
@@ -57,6 +67,8 @@ public class PokemonFlightProfile {
         if (openSpace)  chance += cfg.takeoff.bonusOpenSpace;
         if (idleTicks > cfg.idleLongThreshold1) chance += cfg.takeoff.bonusIdleLong;
         if (idleTicks > cfg.idleLongThreshold2) chance += cfg.takeoff.bonusIdleLong;
+        // Agitation mạnh mẽ thúc đẩy cất cánh
+        chance += agitation * cfg.agitationTakeoffBonus;
         return Math.min(chance, 0.90);
     }
 
