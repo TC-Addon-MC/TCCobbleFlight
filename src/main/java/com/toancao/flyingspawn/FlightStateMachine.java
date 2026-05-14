@@ -40,6 +40,8 @@ public class FlightStateMachine {
 
     /** Chạy logic mỗi tick tùy theo state hiện tại */
     public void tick() {
+
+
         globalTick++;
         profile.ticksInCurrentState++;
 
